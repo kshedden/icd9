@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/Projects/icd9")
-
 import icd9
 
 assert(icd9.decimal_to_short("1.0") == "0010")
