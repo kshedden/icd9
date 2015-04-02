@@ -11,3 +11,5 @@ to prepare the JSON files distributed with this package is contained
 in the resources subdirectory.
 
 The package also includes a minimal set of icd9 format utilities.
+
+See also https://github.com/sirrice/icd9.
