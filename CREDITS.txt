@@ -1,0 +1,5 @@
+This package is based on the R package of the same name written by
+Jack Wasey (github.com/jackwasey).
+
+The data files are converted directly from the R package using the
+script icd9.R located in the resources directory of the source tree.

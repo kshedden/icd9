@@ -1,0 +1,5 @@
+The data contained in this package was obtained from the R icd9
+package, which has the following copyright:
+
+copyright: 2014-2015 Jack O Wasey
+License: GPL-3
