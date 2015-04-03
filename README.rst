@@ -47,7 +47,7 @@ beginning with '44' and all codes beginning with '323':
 
 ::
 
-  >>> full = {"group1": ["12345", "54321"]
+  >>> full = {"group1": ["12345", "54321"]}
   >>> init = {"group2": ["44", "323"]}
   >>> counter = icd9.Counter(codes_full=full, codes_initial=init)
 
