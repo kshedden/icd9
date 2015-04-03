@@ -40,16 +40,22 @@ The package contains functions for manipulating the codes.
   "E0123"
 
 The package contains a ``Counter`` class for determining the number of
-times a given subject has codes that belong to one or more classes.
-To illustrate, first we define a class that contains the codes '12345'
-and '54321', and a second class that contains all codes beginning with
-'44' and all codes beginning with '323':
+times a given subject has codes that belong to one or more code
+classes.  To illustrate, first we define a class that contains the
+codes '12345' and '54321', and a second class that contains all codes
+beginning with '44' and all codes beginning with '323':
 
 ::
 
   >>> full = {"group1": ["12345", "54321"]
   >>> init = {"group2": ["44", "323"]}
   >>> counter = icd9.Counter(codes_full=full, codes_initial=init)
+
+Note that when we want to add codes that match exactly we put them in
+the `codes_full` argument, and when we want to add codes that match as
+an initial substring we put them in the `codes_initial` argument.
+Each ICD9 code class can be represented in either or both of these
+arguments.
 
 Now we can take a ``Pandas.Series`` object `codes` whose index is
 interpreted as subject identifiers, and whose values are ICD9 codes,
