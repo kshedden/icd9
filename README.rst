@@ -1,11 +1,10 @@
-This is a Python implementation of some of the features of the R icd9_
-package.
+This is a Python library for working with ICD9 codes.  ICD9 is version
+9 of the "International Statistical Classification of Diseases and
+Related Health Problems".  See http://en.wikipedia.org/wiki/ICD for
+more information.  The library is heavily influenced by, and borrows
+data from the R icd9_ package.
 
 .. _icd9: http://cran.r-project.org/web/packages/icd9/index.html
-
-ICD9 is version 9 of the "International Statistical Classification of
-Diseases and Related Health Problems".  See
-http://en.wikipedia.org/wiki/ICD for more information.
 
 The package includes lists of ICD9 codes associated with specific
 conditions, and information about the ICD9 codes themselves.
@@ -67,6 +66,16 @@ and update the counter:
 
 The ``counter.table`` attribute contains the number of occurences of
 each code within each of the groups, in each subject.
+
+Counters can be used to calculate comorbidity indices like the
+Elixhauser index.
+
+::
+
+  >>> counter = icd9.Counter(codes_full=icd9.elixComorbid)
+  >>> counter.update(chunk1)
+  >>> counter.update(chunk2)
+  >>> elix = (counter.table > 0).sum(1)
 
 All of the data components of the package were obtained from the R
 icd9 package.  See COPYRIGHT.txt for relevant copyright information.
