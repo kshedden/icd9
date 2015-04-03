@@ -1,7 +1,7 @@
 This is a Python implementation of some of the features of the R icd9_
 package.
 
-_icd9: http://cran.r-project.org/web/packages/icd9/index.html
+.. _icd9: http://cran.r-project.org/web/packages/icd9/index.html
 
 ICD9 is version 9 of the "International Statistical Classification of
 Diseases and Related Health Problems".  See
