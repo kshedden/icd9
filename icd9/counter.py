@@ -10,7 +10,7 @@ import numpy as np
 
 class Counter(object):
     """
-   Summaries of ID9 code category matches to data.
+   Summaries of ICD9 code category matches to data.
 
     A 'category' is a set of ICD9 codes, or initial substrings of ICD9
     codes.  A code associated with a particular subject matches a
@@ -62,15 +62,15 @@ class Counter(object):
     'renal' category codes.
 
     >>> counter = icd9.Counter(codes_full={'Renal': icd9.elixComorbid['Renal']})
-    >>> counter.update(chunk1)
+    >>> counter.update(chunk1, 'id')
 
     Calculate the number of codes matching any of the Elixhauser
     'renal' category codes, and the first and last date at which a
     match occured.
 
     >>> counter = icd9.Counter(codes_full={'Renal': icd9.elixComorbid['Renal']},
-                               date_var='date')
-    >>> counter.update(chunk1)
+                               calculate_dates=True)
+    >>> counter.update(chunk1, 'id', 'date')
 
     Calculate the Elixhauser comorbidity score, defined as the number
     of ICD9 categories in which a subject has at least one reported
@@ -78,8 +78,8 @@ class Counter(object):
     keys are subject ids, and whose values are ICD9 codes.
 
     >>> counter = icd9.Counter(codes_full=icd9.elixComorbid)
-    >>> counter.update(chunk1)
-    >>> counter.update(chunk2)
+    >>> counter.update(chunk1, 'id')
+    >>> counter.update(chunk2, 'id')
     >>> elix = (counter.table > 0).sum(1)
 
     Set up a counter that will count the number of codes per subject
@@ -96,11 +96,11 @@ class Counter(object):
     >>> counter.update(chunk)
     """
 
-    def __init__(self, codes_full=None, codes_initial=None, date_var=None):
+    def __init__(self, calculate_dates=False, codes_full=None, codes_initial=None):
 
         self.codes_full = codes_full if codes_full is not None else {}
         self.codes_initial = codes_initial if codes_initial is not None else {}
-        self.date_var = date_var
+        self.calculate_dates = calculate_dates
 
         columns = set(self.codes_full.keys()) | set(self.codes_initial.keys())
         columns = list(columns)
@@ -108,7 +108,7 @@ class Counter(object):
         self.table = pd.DataFrame()
         for col in columns:
             self.table[col + " [N]"] = pd.Series([], dtype=np.float64)
-            if date_var is not None:
+            if self.calculate_dates:
                 self.table[col + " [first]"] = pd.Series([], dtype='datetime64[ns]')
                 self.table[col + " [last]"] = pd.Series([], dtype='datetime64[ns]')
 
@@ -121,33 +121,35 @@ class Counter(object):
         return lambda x : any([x.startswith(y) for y in self.codes_initial[col]])
 
 
-    def _update_sums(self, codes, ix, col, icd9_var):
-        codes1 = codes.loc[ix, :]
-        gb = ix.astype(np.float64).groupby(ix.index)
-        val = gb.agg({icd9_var: np.sum})[icd9_var]
+    def _update_sums(self, idval, col):
+        if idval.shape[0] == 0:
+            return
+        val = idval.groupby(idval.values).agg(len)
         vname = col + " [N]"
         self.table.loc[:, vname].fillna(val, inplace=True)
         self.table.loc[:, vname] = self.table.loc[:, vname].add(val, fill_value=0)
 
 
-    def _update_dates(self, codes, ix, col, date_var):
-        codes1 = codes.loc[ix, :]
-        gb = codes1.groupby(codes1.index)
+    def _update_dates(self, codes, col, id_var, date_var):
+        if codes.shape[0] == 0:
+            return
+        gb = codes.groupby(codes[id_var])
         for typ, func, vname in (("min", np.min, col + " [first]"),
                                  ("max", np.max, col + " [last]")):
-            val = gb.agg({date_var: func})[date_var]
-            self.table.loc[:, vname].fillna(val, inplace=True)
-            d1 = self.table.loc[:, vname].copy(deep=False)
-            d1.columns = date_var
-            dd = d1 - val
+            val = gb.agg({date_var: func})
+            self.table.loc[:, vname].fillna(val[date_var], inplace=True)
+            tdiff = self.table.loc[val.index, vname] - val[date_var]
             if typ == "min":
-                ix = dd > 0
+                ix = tdiff > 0
             else:
-                ix = dd < 0
-            self.table.loc[ix, vname] = val[ix]
+                ix = tdiff < 0
+            if not ix.any():
+                continue
+            ix = ix.index[ix]
+            self.table.loc[ix, vname] = val.loc[ix, date_var]
 
 
-    def update(self, codes, date_var=None):
+    def update(self, codes, id_var, date_var=None):
         """
         Update the table of ICD9 code counts according to a given set
         of values.
@@ -156,21 +158,23 @@ class Counter(object):
         ----------
         codes : pandas.DataFrame object
             A pandas.DataFrame object whose index contains subject
-            identifiers.  The DataFrame should have two columns, one
-            containing dates and one containing ICD9 codes.
+            identifiers.  The DataFrame should have a column
+            containing subject identifiers, a column containing code
+            values, and optionally a column containing time values.
+        id_var : string
+            The name of the column of `codes` containing subjects id's.
         date_var : string
-            The name of the column of `codes` containing the date at
-            which the code applies.  If None, no date quantities are
-            not calculated.
+            The name of the colum of `codes` containing servie times.
         """
 
-        # The column containing the ICD9 codes.
-        icd9_var = list(set(codes.columns) - set([date_var]))
-        assert(len(icd9_var) == 1)
-        icd9_var = icd9_var[0]
+        cols = set(codes.columns) - set([id_var])
+        if date_var is not None:
+            cols = cols - set([date_var])
+        assert(len(cols) == 1)
+        code_var = list(cols)[0]
 
         # Add rows for new index values
-        ix = np.setdiff1d(codes.index.unique(), self.table.index)
+        ix = np.setdiff1d(codes[id_var].unique(), self.table.index)
         df = pd.DataFrame(index=ix, dtype=np.float64)
         for col in self.table.columns:
             if "[N]" in col:
@@ -182,14 +186,13 @@ class Counter(object):
         self.table = self.table.append(df)
 
         for col in self.codes_full.keys():
-            ix = codes[icd9_var].isin(self.codes_full[col])
-            self._update_sums(codes, ix, col, icd9_var)
-            if self.date_var is not None:
-                self._update_dates(codes, ix, col, date_var)
+            ix = codes[code_var].isin(self.codes_full[col])
+            self._update_sums(codes.loc[ix, id_var], col)
+            if self.calculate_dates:
+                self._update_dates(codes.loc[ix, :], col, id_var, date_var)
 
         for col in self.codes_initial.keys():
-            ix = codes[icd9_var].apply(self._matcher[col])
-            self._update_sums(codes, ix, col, icd9_var)
-            if self.date_var is not None:
-                self._update_dates(codes, ix, col, date_var)
-
+            ix = codes[code_var].apply(self._matcher[col])
+            self._update_sums(codes.loc[ix, id_var], col)
+            if self.calculate_dates:
+                self._update_dates(codes.loc[ix, :], col, id_var, date_var)
