@@ -40,8 +40,11 @@ The package contains functions for manipulating the codes.
 
 The package contains a ``Counter`` class for accumulating statistics
 about the matches between codes associated to a particular subject and
-a given set of code classes.  The number of matches, and optionally
-the first and last date at which a code match occurred are computed.
+a given set of code classes.  The ``Counter`` class is designed for
+use with data streams, in which a large file is read in chunks and the
+statistics are incrementally updated according to the contents of each
+chunk.  The number of matches for each code class, and optionally the
+first and last date at which a code class is matched are computed.
 
 To illustrate, first we define a class that contains the codes '12345'
 and '54321', and a second class that contains all codes beginning with
@@ -64,10 +67,11 @@ values are ICD9 codes, and update the counter:
 
 ::
 
-  >>> counter.update(codes)
+  >>> counter.update(codes, 'id')
 
 The ``counter.table`` attribute contains the number of occurrences of
-codes within each of the groups, in each subject.
+codes within each of the groups, for each subject.  The unique subject
+identifier for a given chunk is given as the `id` argument.
 
 Counters can be used to calculate comorbidity indices like the
 Elixhauser index.
@@ -75,8 +79,8 @@ Elixhauser index.
 ::
 
   >>> counter = icd9.Counter(codes_full=icd9.elixComorbid)
-  >>> counter.update(chunk1)
-  >>> counter.update(chunk2)
+  >>> counter.update(chunk1, 'id')
+  >>> counter.update(chunk2, 'id')
   >>> elix = (counter.table > 0).sum(1)
 
 Now suppose that there is a service date associated with each code,
@@ -88,7 +92,8 @@ each category.
 
 ::
 
-  >>> counter = icd9.Counter(codes_full=icd9.elixComorbid, date_var='date')
+  >>> counter = icd9.Counter(codes_full=icd9.elixComorbid, calculate_dates=True)
+  >>> counter.update(chunk, 'id', 'date')
 
 All of the data components of the package were obtained from the R
 icd9 package.  See COPYRIGHT.txt for relevant copyright information.

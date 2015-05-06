@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/Projects/icd9")
-
 import icd9
 import pandas as pd
 import numpy as np
